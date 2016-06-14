@@ -4,7 +4,7 @@
 
 #$shareFilter = "SELECT * FROM Win32_Share WHERE Name != 'ADMIN$' AND Name != 'IPC$' AND Description != 'Default share'"
 
-function Export-shares-To-File {
+function Export-sharesToFile {
 
     param 
     ( 
@@ -41,13 +41,22 @@ function Export-shares-To-File {
   
               [Array]$ACL += New-Object Security.AccessControl.FileSystemAccessRule($UserName, $ace.AccessMask, $ace.AceType)
             }            
-            foreach($item in $ACL){
-                
-                $sharePermissions = $item.IdentityReference.ToString() + ';' + $item.AccessControlType.ToString() + ';' + $item.FileSystemRights.ToString() + ';' + $ShareName + ';' + $listedShare.Path
-                $sharePermissions | out-file $FileRepositoryPath -Append
+                foreach($item in $ACL){
+                    
+                    $sharePermissions = $item.IdentityReference.ToString() + ';' + $item.AccessControlType.ToString() + ';' + $item.FileSystemRights.ToString() + ';' + $ShareName + ';' + $listedShare.Path
+                    $sharePermissions | out-file $FileRepositoryPath -Append
             }
             Remove-Variable -Name ACL
         #>
+        
+        if((Test-Path ($FileRepositoryPath += '\sharePermission.csv') -eq $true )
+        {
+            $output = "The exportation of the file ""sharePermission.csv"" was successful"
         }
+        else
+        {
+            $output = "A file called ""sharePermission.csv"" already exist in the specified location"
+        }
+        return $output
     }
 }
