@@ -49,7 +49,7 @@ function Export-sharesToFile {
             Remove-Variable -Name ACL
         #>
         
-        if((Test-Path ($FileRepositoryPath += '\sharePermission.csv') -eq $true )
+        if((Test-Path ($FileRepositoryPath += '\sharePermission.csv')) -eq $true )
         {
             $output = "The exportation of the file ""sharePermission.csv"" was successful"
         }
@@ -58,5 +58,6 @@ function Export-sharesToFile {
             $output = "A file called ""sharePermission.csv"" already exist in the specified location"
         }
         return $output
-    }
+        
+    }}
 }

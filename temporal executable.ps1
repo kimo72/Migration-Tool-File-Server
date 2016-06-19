@@ -1,7 +1,7 @@
-﻿import-module 'C:\Users\admin0987\Documents\GitHub\Migration-Tool-File-Server\ExportSharesInVolume.psm1' -force
+﻿import-module 'C:\Users\Administrator\Documents\GitHub\Migration-Tool-File-Server\ExportQuota.psm1' -force
 
 $LogicVolumen = @()
-$LogicVolumen += 'D:'
-$LogicVolumen += 'F:'
+$LogicVolumen += 'K:\\'
+#$LogicVolumen += 'H:'
 
-Export-shares-To-File -FileRepositoryPath 'C:\Users' -volumens $LogicVolumen
+Get-QuotaConfig -DestinationPath "C:\empty" -selectedVolumenes $LogicVolumen
