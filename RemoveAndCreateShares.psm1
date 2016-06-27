@@ -1,4 +1,4 @@
-﻿function Import-shares-To-server {
+﻿function Import-ClusterServershares {
 
     param 
     ( 
@@ -105,3 +105,5 @@
 
         }
 }
+
+Export-ModuleMember -function Import-ClusterServershares
