@@ -11,53 +11,57 @@ function Export-sharesToFile {
         [string]$FileRepositoryPath,
         [Array]$volumens
     )
+           
+           $volumens2 =@()
+           foreach($vol in $volumens){
+           $vol.replace(":\",":")
+           $volumens2 +=  $vol
+           }
+              $volumens2 
+                                       
+        $sharePermissions = 'DomainUser;Action;Permission;share;Path'
+        $sharePermissions | out-file ($FileRepositoryPath+ '\sharePermission.csv') -Append
+        
+        foreach($volumen in $volumens){
+            $sharedVolume
+            $sharedVolume = $volumen
+            $nonadministrativeVolume = "\\DAVIVIENDAFS\" + $sharedVolume.replace(":","$")
+            $nonadministrativeVolumeLetter = $sharedVolume.replace(":",":\")
+            $shareFilter = "SELECT * FROM Win32_Share WHERE Name != 'ADMIN$' AND Name != 'IPC$' AND Description != 'Default share' AND Path LIKE '$sharedVolume%'"
 
-    $FileRepositoryPath += '\sharePermission.csv'
-    $FileRepositoryPath
-    $sharePermissions = 'DomainUser;Action;Permission;share;Path'
-    $sharePermissions | out-file $FileRepositoryPath -Append
+            $sharesInVolume = Get-WmiObject -query $shareFilter
+            $objShareSec = Get-WMIObject -Class Win32_LogicalShareSecuritySetting -ComputerName localhost
 
-    foreach($volumen in $volumens){
-    $sharedVolume
-    $sharedVolume = $volumen
-    write-host $shareFilter = "SELECT * FROM Win32_Share WHERE Name != 'ADMIN$' AND Name != 'IPC$' AND Description != 'Default share' AND Path LIKE '$sharedVolume%'"
-    $shareFilter
-    $sharesInVolume = Get-WmiObject -query $shareFilter
-        foreach($listedShare in $sharesInVolume){
+            foreach($listedShare in $sharesInVolume){
 
-            $ShareName = $listedShare.Name
+               
+               $ShareName = $listedShare.Name
+               $ShareName 
+               
+               if ($listedShare.Path -ne $nonadministrativeVolumeLetter){
+                    $filteredShare = $objShareSec | where-object {$_.Name -eq $ShareName}
+               
+                           $SD = $filteredShare.GetSecurityDescriptor().Descriptor 
+                           
+                           $SD.DACL.Count
+                            
+                           foreach($ace in $SD.DACL)
+                           {
+                             $UserName = $ace.Trustee.Name  
+                             If ($ace.Trustee.Domain -ne $Null) {$UserName = "$($ace.Trustee.Domain)\$UserName"}
+                             If ($ace.Trustee.Name -eq $Null) {$UserName = $ace.Trustee.SIDString }
+                         
+                             [Array]$ACL += New-Object Security.AccessControl.FileSystemAccessRule($UserName, $ace.AccessMask, $ace.AceType)
+                           }            
 
-            $objShareSec = Get-WMIObject -Class Win32_LogicalShareSecuritySetting -Filter "name='$ShareName'" 
-    
-            $SD = $objShareSec.GetSecurityDescriptor().Descriptor
-            $ShareName
-            $SD.DACL.Count
-     
-            foreach($ace in $SD.DACL)
-            {
-              $UserName = $ace.Trustee.Name  
-              If ($ace.Trustee.Domain -ne $Null) {$UserName = "$($ace.Trustee.Domain)\$UserName"}
-              If ($ace.Trustee.Name -eq $Null) {$UserName = $ace.Trustee.SIDString }
-  
-              [Array]$ACL += New-Object Security.AccessControl.FileSystemAccessRule($UserName, $ace.AccessMask, $ace.AceType)
-            }            
-                foreach($item in $ACL){
-                    
-                    $sharePermissions = $item.IdentityReference.ToString() + ';' + $item.AccessControlType.ToString() + ';' + $item.FileSystemRights.ToString() + ';' + $ShareName + ';' + $listedShare.Path
-                    $sharePermissions | out-file $FileRepositoryPath -Append
+                           foreach($item in $ACL){
+
+                               $sharePermissions = $item.IdentityReference.ToString() + ';' + $item.AccessControlType.ToString() + ';' + $item.FileSystemRights.ToString() + ';' + $ShareName + ';' + $listedShare.Path
+                               $sharePermissions | out-file ($FileRepositoryPath+ '\sharePermission.csv')-Append
+                           }
+                           Remove-Variable -Name ACL
+               }
             }
-            Remove-Variable -Name ACL
-        #>
-        
-        if((Test-Path ($FileRepositoryPath += '\sharePermission.csv')) -eq $true )
-        {
-            $output = "The exportation of the file ""sharePermission.csv"" was successful"
         }
-        else
-        {
-            $output = "A file called ""sharePermission.csv"" already exist in the specified location"
-        }
-        return $output
-        
-    }}
+   #>
 }
