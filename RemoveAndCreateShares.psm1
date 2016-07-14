@@ -1,60 +1,114 @@
-﻿
-#$shares = Get-WMIObject -class Win32_share | Where-Object {$_.Path -match "C:" -and $_.Name -notmatch '`$'}
-
-
-#$shareFilter = "SELECT * FROM Win32_Share WHERE Name != 'ADMIN$' AND Name != 'IPC$' AND Description != 'Default share'"
-
-function Export-shares-To-File {
+﻿function Import-ClusterServershares {
 
     param 
     ( 
-        [string]$FileRepositoryPath,
-        [Array]$volumens
+        [string]$FileRepositoryPath
     )
-                                       
-        $sharePermissions = 'DomainUser;Action;Permission;share;Path'
-        $sharePermissions | out-file 'D:\Export\sharePermission.csv' -Append
+        #$FileRepositoryPath = 'C:\Users\Administrator.WINTER\Desktop\sharePermission.csv' 
+    $FileRepositoryPath += '\sharePermission.csv'
+    $allSharesExported = Import-Csv $FileRepositoryPath -Delimiter ';' #| where {$_.share -contains 'Files'}
+
+    $serversTotals = $allSharesExported.share
+
+    
+    $allSharesExportedUniqueValues = $serversTotals | Select-Object -Unique
+    
+        # Parte que elimina todos los recursos existentes
         
-        foreach($volumen in $volumens){
-            $sharedVolume
-            $sharedVolume = $volumen
-            $nonadministrativeVolume = "\\DAVIVIENDAFS\" + $sharedVolume.replace(":","$")
-            $nonadministrativeVolumeLetter = $sharedVolume.replace(":",":\")
-            $shareFilter = "SELECT * FROM Win32_Share WHERE Name != 'ADMIN$' AND Name != 'IPC$' AND Description != 'Default share' AND Path LIKE '$sharedVolume%'"
+        <#
+        $queryDelete = "SELECT * FROM Win32_Share WHERE Name != 'ADMIN$' AND Name != 'IPC$' AND Description != 'Default share'"
+        $sharesFUncionalitydeleteShares = Get-WmiObject -Query $queryDelete
 
-            $sharesInVolume = Get-WmiObject -query $shareFilter
-            $objShareSec = Get-WMIObject -Class Win32_LogicalShareSecuritySetting -ComputerName localhost
 
-            foreach($listedShare in $sharesInVolume){
-
-               
-               $ShareName = $listedShare.Name
-               $ShareName 
-               
-               if ($listedShare.Path -ne $nonadministrativeVolumeLetter){
-                    $filteredShare = $objShareSec | where-object {$_.Name -eq $ShareName}
-               
-                           $SD = $filteredShare.GetSecurityDescriptor().Descriptor 
-                           
-                           $SD.DACL.Count
-                            
-                           foreach($ace in $SD.DACL)
-                           {
-                             $UserName = $ace.Trustee.Name  
-                             If ($ace.Trustee.Domain -ne $Null) {$UserName = "$($ace.Trustee.Domain)\$UserName"}
-                             If ($ace.Trustee.Name -eq $Null) {$UserName = $ace.Trustee.SIDString }
-                         
-                             [Array]$ACL += New-Object Security.AccessControl.FileSystemAccessRule($UserName, $ace.AccessMask, $ace.AceType)
-                           }            
-
-                           foreach($item in $ACL){
-
-                               $sharePermissions = $item.IdentityReference.ToString() + ';' + $item.AccessControlType.ToString() + ';' + $item.FileSystemRights.ToString() + ';' + $ShareName + ';' + $listedShare.Path
-                               $sharePermissions | out-file 'D:\Export\sharePermission.csv' -Append
-                           }
-                           Remove-Variable -Name ACL
-               }
-            }
+        foreach($Sharetodelete in $sharesFUncionalitydeleteShares){
+           $Sharetodelete.delete()
         }
-   #>
+        #>
+
+    
+    foreach ($uniqueShareValues in $allSharesExportedUniqueValues){
+        $i++
+
+        write-host "Escriba esto: "$uniqueShareValues.ToString() + $i
+       
+        $loadSharePermissions = Import-Csv $FileRepositoryPath -Delimiter ';' | where {$_.share -contains $uniqueShareValues }
+
+        foreach($sharePath in $loadSharePermissions){
+            $sharePathFounded = $sharePath.Path
+            $shareNameToSet = $sharePath.share
+            
+        }
+        
+    
+        #$loadSharePermissions = Import-Csv "C:\Users\Administrator.WINTER\Desktop\sharePermission.csv" -Delimiter ';' | where {$_.share -contains 'Files'}
+
+        $fullcontrol = 2032127
+        $change = 1245631
+        $read = 1179785
+
+
+        
+
+        #AccessMasks:
+        #2032127 = Full Control
+        #1245631 = Change
+        #1179817 = Read
+        $sd = ([WMIClass] "Win32_SecurityDescriptor").CreateInstance()
+        #Share with Domain Admins
+        foreach($Acentry in $loadSharePermissions){
+
+            $userentry = $Acentry.DomainUser.ToString()
+            $AcentrySpliting = $userentry.Split('`\')
+            write-host $FinalPermission - $userentry
+            $FinalPermission = ""
+
+            if ($Acentry.Permission -match 'read'){
+                $FinalPermission = 1179817
+            }elseif ($Acentry.Permission -match 'Modify'){
+                $FinalPermission = 1245631
+            }elseif($Acentry.Permission -match 'FullControl'){
+                $FinalPermission = 2032127
+            }
+            
+            if ($AcentrySpliting.count -gt 1){
+                $ACE = ([WMIClass] "Win32_ACE").CreateInstance()
+                $Trustee = ([WMIClass] "Win32_Trustee").CreateInstance()
+                $Trustee.Name = $AcentrySpliting[1]
+                $Trustee.Domain = $Null
+                ##$Trustee.SID = ([wmi]"win32_userAccount.Domain='york.edu',Name='$name'").sid   
+                $ace.AccessMask = $FinalPermission
+                $ace.AceFlags = 3
+                $ace.AceType = 0
+                $ACE.Trustee = $Trustee 
+                $sd.DACL += $ACE.psObject.baseobject
+            }else{
+                $ACE = ([WMIClass] "Win32_ACE").CreateInstance()
+                $Trustee = ([WMIClass] "Win32_Trustee").CreateInstance()
+                $Trustee.Name = $AcentrySpliting[0]
+                $Trustee.Domain = $Null
+                ##$Trustee.SID = ([wmi]"win32_userAccount.Domain='york.edu',Name='$name'").sid   
+                $ace.AccessMask = $FinalPermission
+                $ace.AceFlags = 3
+                $ace.AceType = 0
+                $ACE.Trustee = $Trustee 
+                $sd.DACL += $ACE.psObject.baseobject             
+            }
+            Remove-Variable -Name ace
+            Remove-Variable -Name Trustee
+            Remove-Variable -Name AcentrySpliting
+        }
+
+
+
+        $FolderPath = $sharePathFounded
+        $ShareName = $shareNameToSet
+        $Type = 0
+        write-host 'Parameters: ' $FolderPath '.' $ShareName '.' $Type
+        $objWMI = [wmiClass] 'Win32_share'
+        $objWMI.create($FolderPath, $ShareName, 0,100,"","",$sd)
+        Remove-Variable -Name SD
+
+        }
 }
+
+Export-ModuleMember -function Import-ClusterServershares
