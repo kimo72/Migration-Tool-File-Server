@@ -6,12 +6,20 @@
     )
         #$FileRepositoryPath = 'C:\Users\Administrator.WINTER\Desktop\sharePermission.csv' 
     $FileRepositoryPath += '\sharePermission.csv'
-    $allSharesExported = Import-Csv $FileRepositoryPath -Delimiter ';' #| where {$_.share -contains 'Files'}
-
-    $serversTotals = $allSharesExported.share
-
+      $allShareLoadedInformation = @()
+    $allShareLoadedDriveShareToDelete = @()
     
-    $allSharesExportedUniqueValues = $serversTotals | Select-Object -Unique
+    $allSharesExported = Import-Csv $FileRepositoryPath -Delimiter ';' #| where {$_.share -contains 'Files'}
+    foreach ($lineFounded in $allSharesExported ){
+        $allShareLoadedInformation += $lineFounded.share
+        $gettingUnitInformation = $lineFounded.Path.tostring().substring(0,2)
+        $allShareLoadedDriveShareToDelete += $gettingUnitInformation.toUpper()
+        #$serversTotals = $allSharesExported.share
+    }
+    #$allShareLoadedInformation
+  
+    $allSharesExportedUniqueValues = $allShareLoadedInformation | Select-Object -Unique
+    $allDriveShareToDelete =  $allShareLoadedDriveShareToDelete | Select-Object -Unique
     
         # Parte que elimina todos los recursos existentes
         
